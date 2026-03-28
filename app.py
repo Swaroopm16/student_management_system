@@ -1,51 +1,32 @@
-from flask import Flask, request, jsonify, send_from_directory
+import streamlit as st
 import joblib
 import numpy as np
 import warnings
-import os
-
 warnings.filterwarnings('ignore')
 
-app = Flask(__name__, static_folder='static', template_folder='templates')
+model = joblib.load('models/student_model.pkl')
+le = joblib.load('models/label_encoder.pkl')
 
-# Load models
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-model = joblib.load(os.path.join(BASE_DIR, 'models', 'student_model.pkl'))
-le = joblib.load(os.path.join(BASE_DIR, 'models', 'label_encoder.pkl'))
+st.title("DevLevel Classifier")
+st.write("Predict your developer skill level")
 
-FEATURES = ['leetcode_total', 'contest_rating', 'github_repos', 'github_commits', 'commit_streak', 'open_source_prs']
+leetcode_total = st.number_input("LeetCode Total Solved", min_value=0, value=0)
+contest_rating = st.number_input("Contest Rating", min_value=0, value=0)
+github_repos = st.number_input("GitHub Repos", min_value=0, value=0)
+github_commits = st.number_input("GitHub Commits", min_value=0, value=0)
+commit_streak = st.number_input("Commit Streak (days)", min_value=0, value=0)
+open_source_prs = st.number_input("Open Source PRs", min_value=0, value=0)
 
-@app.route('/')
-def index():
-    return send_from_directory('templates', 'index.html')
+if st.button("Classify My Level"):
+    X = np.array([[leetcode_total, contest_rating, github_repos, github_commits, commit_streak, open_source_prs]])
+    pred = model.predict(X)
+    proba = model.predict_proba(X)[0]
+    label = le.inverse_transform(pred)[0]
+    classes = le.classes_.tolist()
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    try:
-        data = request.get_json()
-        
-        # Extract features in the correct order
-        features = [float(data.get(f, 0)) for f in FEATURES]
-        X = np.array([features])
-        
-        # Predict
-        pred = model.predict(X)
-        proba = model.predict_proba(X)[0]
-        label = le.inverse_transform(pred)[0]
-        
-        # Build confidence scores per class
-        classes = le.classes_.tolist()
-        confidence = {cls: round(float(prob) * 100, 1) for cls, prob in zip(classes, proba)}
-        
-        return jsonify({
-            'success': True,
-            'label': label,
-            'confidence': confidence,
-            'top_confidence': round(float(max(proba)) * 100, 1)
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
+    colors = {"Beginner": "🟢", "Intermediate": "🟡", "Expert": "🔴"}
+    st.success(f"{colors.get(label, '⚪')} Predicted Level: **{label}**")
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    st.write("### Confidence Scores")
+    for cls, prob in zip(classes, proba):
+        st.progress(float(prob), text=f"{cls}: {round(prob*100, 1)}%")
