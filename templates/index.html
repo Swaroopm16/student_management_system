@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DevLevel — Developer Skill Classifier</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #080b12;
+    --surface: #0d1117;
+    --surface2: #131920;
+    --border: #1e2836;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --beginner: #10b981;
+    --intermediate: #f59e0b;
+    --expert: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --glow: 0 0 40px rgba(0,229,255,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridMove 20s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @keyframes gridMove {
+    0% { background-position: 0 0; }
+    100% { background-position: 60px 60px; }
+  }
+
+  /* Radial glow */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80vw;
+    height: 60vh;
+    background: radial-gradient(ellipse, rgba(0,229,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* HEADER */
+  header {
+    padding: 40px 0 20px;
+    text-align: center;
+  }
+
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,229,255,0.08);
+    border: 1px solid rgba(0,229,255,0.2);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 24px;
+  }
+
+  .logo-dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -2px;
+    background: linear-gradient(135deg, #fff 0%, rgba(0,229,255,0.9) 50%, rgba(124,58,237,0.9) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    max-width: 480px;
+    margin: 0 auto 48px;
+    line-height: 1.7;
+  }
+
+  /* FORM CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.4;
+  }
+
+  .section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--accent);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .fields-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+
+  .field {
+    position: relative;
+  }
+
+  .field label {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    transition: color 0.2s;
+  }
+
+  .field:focus-within label {
+    color: var(--accent);
+  }
+
+  .input-wrap {
+    position: relative;
+  }
+
+  .field-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    pointer-events: none;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+
+  .field:focus-within .field-icon {
+    opacity: 1;
+  }
+
+  input[type="number"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px 12px 40px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  input[type="number"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,229,255,0.1);
+    background: #0a1520;
+  }
+
+  input[type="number"]:hover {
+    border-color: #2d3f53;
+  }
+
+  .field-hint {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 5px;
+    opacity: 0.7;
+  }
+
+  /* SUBMIT BUTTON */
+  .btn-predict {
+    width: 100%;
+    background: linear-gradient(135deg, rgba(0,229,255,0.15), rgba(124,58,237,0.15));
+    border: 1px solid rgba(0,229,255,0.3);
+    border-radius: 12px;
+    padding: 16px;
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-predict::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,229,255,0.1), rgba(124,58,237,0.1));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .btn-predict:hover::before { opacity: 1; }
+  .btn-predict:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 30px rgba(0,229,255,0.2);
+    transform: translateY(-1px);
+  }
+
+  .btn-predict:active { transform: translateY(0); }
+
+  .btn-predict.loading {
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(0,229,255,0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* RESULT PANEL */
+  #result-panel {
+    display: none;
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  #result-panel.visible { display: block; }
+
+  .result-card {
+    border-radius: 20px;
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .result-card.beginner {
+    background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.03));
+    border: 1px solid rgba(16,185,129,0.3);
+  }
+
+  .result-card.intermediate {
+    background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.03));
+    border: 1px solid rgba(245,158,11,0.3);
+  }
+
+  .result-card.expert {
+    background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.03));
+    border: 1px solid rgba(239,68,68,0.3);
+  }
+
+  .level-emoji {
+    font-size: 56px;
+    margin-bottom: 16px;
+    display: block;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .level-tag {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+    opacity: 0.7;
+  }
+
+  .level-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 52px;
+    font-weight: 800;
+    letter-spacing: -2px;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .beginner .level-name { color: var(--beginner); }
+  .intermediate .level-name { color: var(--intermediate); }
+  .expert .level-name { color: var(--expert); }
+
+  .confidence-score {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+
+  .confidence-score span {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* Confidence bars */
+  .confidence-bars {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  .bar-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+
+  .bar-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .bar-item:last-child { margin-bottom: 0; }
+
+  .bar-name {
+    font-size: 12px;
+    font-weight: 500;
+    width: 100px;
+    flex-shrink: 0;
+  }
+
+  .bar-track {
+    flex: 1;
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 100px;
+    width: 0%;
+    transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .bar-fill.beginner { background: var(--beginner); }
+  .bar-fill.intermediate { background: var(--intermediate); }
+  .bar-fill.expert { background: var(--expert); }
+
+  .bar-pct {
+    font-size: 12px;
+    color: var(--muted);
+    width: 44px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  /* Error */
+  .error-msg {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 10px;
+    padding: 14px 18px;
+    color: #fca5a5;
+    font-size: 13px;
+    margin-top: 16px;
+    display: none;
+  }
+
+  .error-msg.visible { display: block; }
+
+  /* Tooltip */
+  .tooltip {
+    position: relative;
+    display: inline-block;
+    cursor: help;
+    margin-left: 4px;
+    color: var(--muted);
+    font-size: 10px;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .card { padding: 24px; }
+    .fields-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 32px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo-badge">
+      <span class="logo-dot"></span>
+      AI-Powered Classifier
+    </div>
+    <h1>DevLevel</h1>
+    <p class="subtitle">Enter your developer stats and our ML model will classify your skill level as Beginner, Intermediate, or Expert.</p>
+  </header>
+
+  <!-- INPUT FORM -->
+  <div class="card">
+    <div class="section-label">Developer Metrics</div>
+
+    <div class="fields-grid">
+
+      <div class="field">
+        <label>LeetCode Total Solved</label>
+        <div class="input-wrap">
+          <span class="field-icon">⚡</span>
+          <input type="number" id="leetcode_total" placeholder="0" min="0" value=""/>
+        </div>
+        <div class="field-hint">Total problems solved on LeetCode</div>
+      </div>
+
+      <div class="field">
+        <label>Contest Rating</label>
+        <div class="input-wrap">
+          <span class="field-icon">🏆</span>
+          <input type="number" id="contest_rating" placeholder="0" min="0" value=""/>
+        </div>
+        <div class="field-hint">Your LeetCode contest rating</div>
+      </div>
+
+      <div class="field">
+        <label>GitHub Repos</label>
+        <div class="input-wrap">
+          <span class="field-icon">📦</span>
+          <input type="number" id="github_repos" placeholder="0" min="0" value=""/>
+        </div>
+        <div class="field-hint">Total public + private repos</div>
+      </div>
+
+      <div class="field">
+        <label>GitHub Commits</label>
+        <div class="input-wrap">
+          <span class="field-icon">💾</span>
+          <input type="number" id="github_commits" placeholder="0" min="0" value=""/>
+        </div>
+        <div class="field-hint">Total lifetime commits</div>
+      </div>
+
+      <div class="field">
+        <label>Commit Streak (days)</label>
+        <div class="input-wrap">
+          <span class="field-icon">🔥</span>
+          <input type="number" id="commit_streak" placeholder="0" min="0" value=""/>
+        </div>
+        <div class="field-hint">Longest commit streak in days</div>
+      </div>
+
+      <div class="field">
+        <label>Open Source PRs</label>
+        <div class="input-wrap">
+          <span class="field-icon">🔀</span>
+          <input type="number" id="open_source_prs" placeholder="0" min="0" value=""/>
+        </div>
+        <div class="field-hint">Merged pull requests to OSS</div>
+      </div>
+
+    </div>
+
+    <button class="btn-predict" id="predictBtn" onclick="predict()">
+      ⚡ &nbsp; Classify My Level
+    </button>
+
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <!-- RESULT PANEL -->
+  <div id="result-panel">
+
+    <div class="result-card" id="result-card">
+      <span class="level-emoji" id="result-emoji"></span>
+      <div class="level-tag">Your Developer Level</div>
+      <div class="level-name" id="result-label"></div>
+      <div class="confidence-score">Model confidence: <span id="result-conf"></span></div>
+    </div>
+
+    <div class="confidence-bars">
+      <div class="bar-label">Confidence Breakdown</div>
+      <div class="bar-item">
+        <span class="bar-name" style="color:var(--beginner)">🌱 Beginner</span>
+        <div class="bar-track"><div class="bar-fill beginner" id="bar-beginner"></div></div>
+        <span class="bar-pct" id="pct-beginner">0%</span>
+      </div>
+      <div class="bar-item">
+        <span class="bar-name" style="color:var(--intermediate)">⚙️ Intermediate</span>
+        <div class="bar-track"><div class="bar-fill intermediate" id="bar-intermediate"></div></div>
+        <span class="bar-pct" id="pct-intermediate">0%</span>
+      </div>
+      <div class="bar-item">
+        <span class="bar-name" style="color:var(--expert)">🚀 Expert</span>
+        <div class="bar-track"><div class="bar-fill expert" id="bar-expert"></div></div>
+        <span class="bar-pct" id="pct-expert">0%</span>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>DevLevel &nbsp;·&nbsp; ML-Powered Skill Assessment &nbsp;·&nbsp; RandomForest Classifier</footer>
+
+</div>
+
+<script>
+  const EMOJIS = { Beginner: '🌱', Intermediate: '⚙️', Expert: '🚀' };
+  const LEVEL_CLASSES = { Beginner: 'beginner', Intermediate: 'intermediate', Expert: 'expert' };
+
+  async function predict() {
+    const btn = document.getElementById('predictBtn');
+    const errorEl = document.getElementById('errorMsg');
+    const resultPanel = document.getElementById('result-panel');
+
+    // Gather inputs
+    const fields = ['leetcode_total','contest_rating','github_repos','github_commits','commit_streak','open_source_prs'];
+    const data = {};
+    for (const f of fields) {
+      const val = document.getElementById(f).value.trim();
+      data[f] = val === '' ? 0 : parseFloat(val);
+    }
+
+    // Loading state
+    btn.classList.add('loading');
+    btn.innerHTML = '<span class="spinner"></span> Analyzing...';
+    errorEl.classList.remove('visible');
+    resultPanel.classList.remove('visible');
+
+    try {
+      const res = await fetch('/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const json = await res.json();
+
+      if (!json.success) throw new Error(json.error || 'Prediction failed');
+
+      // Show result
+      const label = json.label;
+      const conf = json.confidence;
+      const levelClass = LEVEL_CLASSES[label] || 'beginner';
+
+      document.getElementById('result-emoji').textContent = EMOJIS[label] || '🎯';
+      document.getElementById('result-label').textContent = label;
+      document.getElementById('result-conf').textContent = json.top_confidence + '%';
+
+      const card = document.getElementById('result-card');
+      card.className = 'result-card ' + levelClass;
+
+      // Confidence bars — reset first
+      ['beginner','intermediate','expert'].forEach(c => {
+        document.getElementById('bar-' + c).style.width = '0%';
+        document.getElementById('pct-' + c).textContent = '0%';
+      });
+
+      resultPanel.classList.remove('visible');
+      resultPanel.classList.add('visible');
+
+      // Animate bars after a tick
+      setTimeout(() => {
+        const map = { beginner: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' };
+        for (const [cls, key] of Object.entries(map)) {
+          const pct = conf[key] || 0;
+          document.getElementById('bar-' + cls).style.width = pct + '%';
+          document.getElementById('pct-' + cls).textContent = pct + '%';
+        }
+      }, 100);
+
+    } catch (err) {
+      errorEl.textContent = '⚠ ' + (err.message || 'Could not connect to the prediction server. Make sure the Flask app is running.');
+      errorEl.classList.add('visible');
+    } finally {
+      btn.classList.remove('loading');
+      btn.innerHTML = '⚡ &nbsp; Classify My Level';
+    }
+  }
+
+  // Allow Enter key
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') predict();
+  });
+</script>
+</body>
+</html>
